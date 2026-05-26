@@ -1,4 +1,6 @@
-# 🎓 AI Student Assistant
+# EduPilot AI
+
+### AI-Powered Student Assistant Browser Extension
 
 > An AI-powered Chrome Extension that serves as your personal academic assistant — 
 > summarizing content, generating quizzes, explaining concepts, and tracking your 
