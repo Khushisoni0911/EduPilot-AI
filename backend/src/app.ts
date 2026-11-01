@@ -6,12 +6,11 @@
 import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import authRoutes from './routes/auth.routes';
-import {
-  authenticateToken,
-  type AuthenticatedRequest,
-} from './middleware/auth.middleware';
+import { authenticateToken,} from './middleware/auth.middleware';
+
 const MAX_TEXT_LENGTH = 30_000;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
@@ -22,15 +21,26 @@ export async function createApp(): Promise<Express> {
   app.use(helmet());
 
   // CORS
-  app.use(
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+app.use(
   cors({
-    origin: [
-      /^chrome-extension:\/\/.*/,
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'https://developer.mozilla.org',
-       'https://simple.wikipedia.org',
-    ],
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        origin.startsWith('https://') ||
+        allowedOrigins.includes(origin) ||
+        origin === `chrome-extension://${process.env.EXTENSION_ID}`
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -40,6 +50,19 @@ export async function createApp(): Promise<Express> {
   // Request parsing
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  // Rate limiting for AI endpoints
+const aiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: 'Too many AI requests. Please try again after 15 minutes.',
+  },
+});
+
+app.use('/api/ai', aiRateLimiter);
 
   // Health check
   app.get('/health', (_req, res) => {
@@ -51,17 +74,7 @@ export async function createApp(): Promise<Express> {
     });
   });
 // Temporary protected route for authentication testing
-app.get(
-  '/api/auth/test-protected',
-  authenticateToken,
-  (req: AuthenticatedRequest, res) => {
-    res.status(200).json({
-      success: true,
-      message: 'Authentication verified successfully.',
-      userId: req.user?.userId,
-    });
-  }
-);
+
 
 
 
