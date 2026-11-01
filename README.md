@@ -1,18 +1,18 @@
-# 🎓 AI Student Assistant
+# EduPilot AI
 
-> An AI-powered Chrome Extension that serves as your personal academic assistant — 
-> summarizing content, generating quizzes, explaining concepts, and tracking your 
-> learning journey without ever leaving your browser.
+### AI-Powered Student Assistant Browser Extension
+
+> A modern AI-powered educational assistant that enhances online learning through intelligent summaries, contextual explanations, quizzes, and productivity tools.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)
 ![React](https://img.shields.io/badge/React-18-61DAFB)
 ![Manifest](https://img.shields.io/badge/Manifest-V3-green)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+
 
 ---
 
-## 🚀 Features
+##  Features
 
 | Feature | Status |
 |---------|--------|
@@ -25,7 +25,7 @@
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 ai-student-assistant/
@@ -37,7 +37,7 @@ ai-student-assistant/
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 **Extension:** React 18, TypeScript, Tailwind CSS, Vite, Chrome MV3  
 **Backend:** Node.js, Express.js, TypeScript  
@@ -46,7 +46,7 @@ ai-student-assistant/
 
 ---
 
-## 📦 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Node.js 18+
@@ -88,7 +88,7 @@ npm run dev
 
 ---
 
-## 📁 Module Progress
+##  Module Progress
 
 | Module | Status | Description |
 |--------|--------|-------------|
@@ -103,13 +103,13 @@ npm run dev
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 This project follows the [Git Flow](https://nvie.com/posts/a-successful-git-branching-model/) branching strategy.
 
 ---
 
-## 📄 License
+##  License
 
 MIT License — see [LICENSE](LICENSE) for details.
 
