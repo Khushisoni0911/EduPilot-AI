@@ -1,12 +1,11 @@
 {
-  "name": "ai-student-assistant-extension",
+  "name": "edupilot-ai",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "vite build --watch",
-    "build": "vite build",
-    "build:prod": "NODE_ENV=production vite build",
-    "preview": "vite preview",
+    "dev": "npm run copy:static && vite build --watch",
+    "build": "vite build && vite build --config vite.content.config.ts && npm run copy:static",
+    "copy:static": "cp manifest.json dist/manifest.json && cp -r public/icons dist/icons",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx --fix",
     "generate-icons": "node scripts/generate-icons.js"
@@ -16,6 +15,7 @@
     "lucide-react": "^0.383.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^6.23.1",
     "tailwind-merge": "^2.3.0",
     "zustand": "^4.5.2"

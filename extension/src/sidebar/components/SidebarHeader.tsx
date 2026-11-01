@@ -24,7 +24,7 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
           <GraduationCap size={18} className="text-white" />
         </div>
         <div>
-          <h1 className="text-sm font-bold leading-none">AI Student Assistant</h1>
+          <h1 className="text-sm font-bold leading-none">EduPilot AI</h1>
           <div className="flex items-center gap-1 mt-0.5">
             {isConnected ? (
               <>
@@ -51,7 +51,7 @@ const SidebarHeader: React.FC<SidebarHeaderProps> = ({
           'transition-colors duration-150',
           'focus:outline-none focus:ring-2 focus:ring-white/50'
         )}
-        aria-label="Close AI Assistant"
+        aria-label="Close EduPilot AI"
         title="Close (Ctrl+Shift+S)"
       >
         <X size={15} className="text-white" />

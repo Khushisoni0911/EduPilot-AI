@@ -18,7 +18,7 @@
  * and error handling.
  */
 
-import type { ExtensionMessage, ExtensionResponse, MessageType } from '../types';
+import type { ExtensionMessage, ExtensionResponse, MessageType } from '../types/types';
 
 // ============================================
 // Send Messages TO Background Worker

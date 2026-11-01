@@ -9,6 +9,7 @@ import type { Config } from 'tailwindcss';
  * so we set up a design system appropriate for that.
  */
 const config: Config = {
+  darkMode: 'class',
   // Tell Tailwind where to look for class usage
   // (so it can tree-shake unused classes in production)
   content: ['./popup.html', './src/**/*.{js,ts,jsx,tsx}'],

@@ -19,9 +19,9 @@ const SidebarContainer: React.FC<SidebarContainerProps> = ({ children, className
         // Full height, flex column layout
         'flex flex-col h-full w-full',
         // Background and border
-        'bg-white border-l border-gray-200',
-        // Font settings
-        'font-sans text-gray-900',
+'bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700',
+// Font settings
+'font-sans text-gray-900 dark:text-gray-100',
         // Prevent text selection bleeding from page
         'select-auto',
         className

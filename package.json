@@ -1,7 +1,7 @@
 {
-  "name": "ai-student-assistant",
+  "name": "EduPilot AI",
   "version": "1.0.0",
-  "description": "AI-Powered Student Assistant Browser Extension - A professional final year project",
+  "description": "EduPilot AI — AI-Powered Student Assistant Browser Extension",
   "private": true,
   "workspaces": [
     "extension",

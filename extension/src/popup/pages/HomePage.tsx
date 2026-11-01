@@ -11,11 +11,11 @@
 import React, { useEffect, useState } from 'react';
 import {
   FileText, HelpCircle, BookOpen, Zap,
-  PanelRight, ExternalLink, Globe
+  PanelRight, ExternalLink, Globe, Layers,
 } from 'lucide-react';
 import { cn } from '../../shared/utils/cn';
 import { sendToBackground } from '../../shared/utils/messaging';
-import type { TabInfo } from '../../shared/types';
+import type { TabInfo } from '../../shared/types/types';
 
 // ============================================
 // Quick Action Config
@@ -53,6 +53,14 @@ const QUICK_ACTIONS = [
     icon: Zap,
     color: 'purple',
     panel: 'explain',
+  },
+    {
+    id: 'flashcards',
+    label: 'Flashcards',
+    description: 'Revise key concepts',
+    icon: Layers,
+    color: 'blue',
+    panel: 'flashcards',
   },
 ] as const;
 
@@ -106,15 +114,28 @@ const HomePage: React.FC = () => {
     }
   };
 
-  const handleQuickAction = async (action: typeof QUICK_ACTIONS[number]) => {
-    // Open sidebar and navigate to the relevant panel
-    try {
-      await sendToBackground('OPEN_SIDEBAR');
+const handleQuickAction = async (action: typeof QUICK_ACTIONS[number]) => {
+  try {
+    const response = await sendToBackground('OPEN_SIDEBAR', {
+      panel: action.panel,
+    });
+
+    if (response.success) {
       window.close();
-    } catch (error) {
-      console.error('[HomePage] Failed to open sidebar for action:', action.id, error);
+    } else {
+      console.error(
+        '[HomePage] Failed to open sidebar:',
+        response.error
+      );
     }
-  };
+  } catch (error) {
+    console.error(
+      '[HomePage] Failed to open sidebar for action:',
+      action.id,
+      error
+    );
+  }
+};
 
   const isPageSupported = tabInfo?.isSupported ?? false;
 
@@ -176,7 +197,7 @@ const HomePage: React.FC = () => {
           <span>
             {sidebarStatus === 'opening'
               ? 'Opening...'
-              : 'Open AI Assistant Panel'}
+              : 'Open EduPilot AI Panel'}
           </span>
         </button>
         {sidebarStatus === 'error' && (
@@ -186,7 +207,7 @@ const HomePage: React.FC = () => {
         )}
         {!isPageSupported && tabInfo && (
           <p className="text-[10px] text-gray-400 text-center mt-1.5">
-            Extension not available on this page type
+            EduPilot AI is not available on this page type
           </p>
         )}
         <p className="text-[10px] text-gray-400 text-center mt-1.5">

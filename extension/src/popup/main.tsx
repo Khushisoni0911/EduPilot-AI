@@ -24,7 +24,7 @@ const rootElement = document.getElementById('root');
 
 if (!rootElement) {
   throw new Error(
-    '[AI Student Assistant] Fatal: Could not find #root element. Check popup.html.'
+    '[EduPilot AI] Fatal: Could not find #root element. Check popup.html.'
   );
 }
 

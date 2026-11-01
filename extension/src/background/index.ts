@@ -1,139 +1,91 @@
 /**
- * Background Service Worker — Entry Point
- *
- * The central nervous system of the extension.
- * Routes messages between popup and content scripts.
- * Manages extension lifecycle events.
- *
- * IMPORTANT MV3 CONSTRAINT:
- * Service Workers are EPHEMERAL. They can stop running
- * at any time when idle. Never store state in module-level
- * variables — always use chrome.storage instead.
+ * Background Service Worker — Module 3 Update
+ * Adds context menu setup.
  */
 
 import { handleMessage } from './message-handler';
 import { initializeTabManager } from './tab-manager';
-import { DEFAULT_SETTINGS, STORAGE_KEYS } from '../shared/types';
+import { setupContextMenu, setupContextMenuClickHandler } from './context-menu';
+import { DEFAULT_SETTINGS, STORAGE_KEYS } from '../shared/types/types';
 
-// ============================================
-// Lifecycle — Installation
-// ============================================
+// ── Lifecycle ──────────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener(async (details) => {
-  console.info('[Background] Extension installed:', details.reason);
+  console.info('[EduPilot AI Background] Extension installed:', details.reason);
+
+  // Setup right-click context menu
+  setupContextMenu();
 
   if (details.reason === 'install') {
     await handleFirstInstall();
-  } else if (details.reason === 'update') {
-    console.info('[Background] Updated to version:', chrome.runtime.getManifest().version);
   }
 });
 
-/**
- * Set default values in storage on first install.
- */
-async function handleFirstInstall(): Promise<void> {
-  try {
-    await chrome.storage.sync.set({
-      [STORAGE_KEYS.SETTINGS]: DEFAULT_SETTINGS,
-    });
+// Setup context menu click handler (always active)
+setupContextMenuClickHandler();
 
-    await chrome.storage.local.set({
-      [STORAGE_KEYS.USER]: null,
-      [STORAGE_KEYS.AUTH_TOKEN]: null,
-      [STORAGE_KEYS.ONBOARDING]: { completed: false, step: 0 },
-      [STORAGE_KEYS.NOTES]: [],
-    });
+// ── Message Router ─────────────────────────────────────────────────────
 
-    console.info('[Background] ✅ Default storage initialized');
-  } catch (error) {
-    console.error('[Background] ❌ Failed to initialize storage:', error);
-  }
-}
-
-// ============================================
-// Lifecycle — Service Worker Activation
-// ============================================
-
-/**
- * The 'activate' event fires when the service worker takes control.
- * We use self (not window — service workers don't have window).
- */
-self.addEventListener('activate', () => {
-  console.info('[Background] Service Worker activated');
-});
-
-// ============================================
-// Message Router
-// ============================================
-
-/**
- * Central message listener.
- * ALL messages from popup and content scripts arrive here.
- * We delegate to message-handler.ts to keep this file clean.
- */
 chrome.runtime.onMessage.addListener(
-  (
-    message: { type: string; payload?: unknown; requestId?: string },
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response: unknown) => void
-  ) => {
-    // Log incoming messages during development
+  (message, sender, sendResponse) => {
     if (process.env.NODE_ENV !== 'production') {
       console.info(
-        '[Background] Message received:',
+        '[EduPilot AI Background] Message:',
         message.type,
         '| From:',
-        sender.tab ? `Tab ${sender.tab.id}` : 'Extension popup'
+        sender.tab ? `Tab ${sender.tab.id}` : 'Popup'
       );
     }
 
-    // Handle message asynchronously and send response
     handleMessage(message, sender)
-      .then((response) => sendResponse(response))
+      .then(sendResponse)
       .catch((error: Error) => {
-        console.error('[Background] Message handling error:', error);
-        sendResponse({
-          success: false,
-          error: error.message || 'Unknown background error',
-        });
+        sendResponse({ success: false, error: error.message });
       });
 
-    // CRITICAL: Return true to keep message channel open for async response.
-    // Without this, sendResponse becomes invalid after the listener returns.
-    return true;
+    return true; // Keep channel open
   }
 );
 
-// ============================================
-// Keyboard Command Handler
-// ============================================
+// ── Keyboard Commands ──────────────────────────────────────────────────
 
-/**
- * Handle keyboard commands defined in manifest.json's "commands" field.
- * Ctrl+Shift+S (Win/Linux) / Cmd+Shift+S (Mac) toggles the sidebar.
- */
 chrome.commands.onCommand.addListener(async (command, tab) => {
-  console.info('[Background] Command received:', command);
-
   if (command === 'toggle-sidebar' && tab?.id) {
     try {
-      await chrome.tabs.sendMessage(tab.id, {
-        type: 'TOGGLE_SIDEBAR',
-        payload: undefined,
-      });
+      await chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_SIDEBAR' });
     } catch {
-      // Content script might not be injected on this page (chrome:// pages etc.)
-      console.warn('[Background] Could not send toggle to tab:', tab.id);
+      console.warn('[EduPilot AI Background] Cannot toggle sidebar on this page');
     }
   }
 });
 
-// ============================================
-// Tab Manager Initialization
-// ============================================
+// ── Tab Cleanup ────────────────────────────────────────────────────────
 
-// Track tab events (tab switching, navigation, closure)
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  // Clean up session storage for closed tabs
+  const sessionData = await chrome.storage.session.get('pendingAction');
+  if (sessionData.pendingAction) {
+    await chrome.storage.session.remove('pendingAction');
+  }
+  console.info(`[EduPilot AI Background] Tab ${tabId} removed`);
+});
+
+// ── Initialization ─────────────────────────────────────────────────────
+
 initializeTabManager();
 
-console.info('[Background] ✅ Service Worker ready');
+async function handleFirstInstall(): Promise<void> {
+  try {
+    await chrome.storage.sync.set({ [STORAGE_KEYS.SETTINGS]: DEFAULT_SETTINGS });
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.USER]: null,
+      [STORAGE_KEYS.AUTH_TOKEN]: null,
+      [STORAGE_KEYS.NOTES]: [],
+    });
+    console.info('[EduPilot AI Background] ✅ First install complete');
+  } catch (error) {
+    console.error('[EduPilot AI Background] ❌ Install error:', error);
+  }
+}
+
+console.info('[EduPilot AI Background] ✅ Service Worker ready — Module 3');

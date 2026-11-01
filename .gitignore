@@ -53,3 +53,16 @@ extension/dist/
 # Temporary files
 *.tmp
 *.temp
+
+
+# Local environment overrides
+.env.*
+!.env.example
+
+# Secrets and credentials
+*.pem
+*.key
+
+# Editor and temporary files
+.vscode/*
+!.vscode/extensions.json

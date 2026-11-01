@@ -17,7 +17,7 @@
  * and SYNC for small settings (theme, preferences).
  */
 
-import type { AppSettings } from '../types';
+import type { AppSettings } from '../types/types';
 
 // ============================================
 // LOCAL Storage (device-only, larger limit)

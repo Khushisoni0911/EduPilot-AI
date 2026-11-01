@@ -8,9 +8,8 @@
     /* Modules */
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/": ["./src/"]
     },
 
     /* Strict Type Checking — NEVER disable these in a professional project */

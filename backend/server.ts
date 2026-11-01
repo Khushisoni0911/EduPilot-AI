@@ -16,6 +16,10 @@
 import 'dotenv/config'; // Must be first — loads .env before anything else
 
 import { createApp } from './src/app';
+import {
+  connectDatabase,
+  disconnectDatabase,
+} from './src/config/database';
 
 // ============================================
 // Environment Validation
@@ -44,6 +48,8 @@ const PORT = parseInt(process.env.PORT || '5000', 10);
 
 async function startServer(): Promise<void> {
   try {
+        // Connect to MongoDB before starting the server
+    await connectDatabase();
     // Create the Express app (defined in app.ts)
     const app = await createApp();
 
@@ -79,8 +85,11 @@ async function startServer(): Promise<void> {
       server.close(async () => {
         console.info('[Server] HTTP server closed');
         // Database disconnection will be added when we setup MongoDB
-        console.info('[Server] ✅ Graceful shutdown complete');
-        process.exit(0);
+        // Disconnect MongoDB gracefully
+await disconnectDatabase();
+
+console.info('[Server] ✅ Graceful shutdown complete');
+process.exit(0);
       });
 
       // Force close after 30 seconds if graceful shutdown fails

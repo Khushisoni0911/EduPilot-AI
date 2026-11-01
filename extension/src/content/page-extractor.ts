@@ -13,7 +13,7 @@
  * 4. Calculate reading metadata
  */
 
-import type { PageContent, PageMetadata } from '../shared/types';
+import type { PageContent, PageMetadata } from '../shared/types/types';
 
 // ============================================
 // Main Extraction Functions

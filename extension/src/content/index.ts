@@ -1,142 +1,237 @@
 /**
- * Content Script — Main Entry Point
+ * Content Script — Main Entry Point (Module 3 Update)
  *
- * This script is injected into EVERY web page the user visits
- * (as configured in manifest.json content_scripts).
+ * This is the orchestrator. It:
+ * 1. Creates all the subsystem instances
+ * 2. Wires them together
+ * 3. Starts listening for events
+ * 4. Sets up cleanup on page unload
  *
- * RESPONSIBILITIES:
- * 1. Inject the sidebar React app into the page DOM
- * 2. Listen for messages from popup/background
- * 3. Extract page content when requested
- * 4. Relay selected text to the extension
- *
- * IMPORTANT SECURITY NOTE:
- * Content scripts run in an "isolated world":
- * - Can access the page's DOM (document, window.location, etc.)
- * - CANNOT access the page's JavaScript variables
- * - CANNOT access JavaScript defined by the website
- * This is a Chrome security feature — it prevents malicious pages
- * from tampering with extension code.
+ * ARCHITECTURE NOTE:
+ * We use a "composition root" pattern here.
+ * All dependencies are created HERE and passed into the classes
+ * that need them. Classes don't create their own dependencies —
+ * they receive them. This makes the code testable and modular.
  */
-
-import { injectSidebar, toggleSidebar, openSidebar, closeSidebar } from './sidebar-injector';
-import { extractPageContent, getSelectedText } from './page-extractor';
-import type { ExtensionMessage, ExtensionResponse } from '../shared/types';
+import '../styles/sidebar.css';
+import { EventManager } from './dom/EventManager';
+import { MutationManager } from './dom/MutationManager';
+import { SelectionDetector } from './selection/SelectionDetector';
+import { SelectionTracker } from './selection/SelectionTracker';
+import { FABManager } from './fab/FABManager';
+import { ContextDetector } from './context/ContextDetector';
+import { ContentMessenger } from './messaging/ContentMessenger';
+import { MessageRouter } from './messaging/MessageRouter';
+import { injectSidebar } from './sidebar-injector';
+import type { IncomingContentMessage, FABAction } from '../shared/types/messages';
+import { isSupportedPage } from './dom/DOMUtils';
 
 // ============================================
-// Initialize Content Script
+// Guard: Only run on supported pages
 // ============================================
 
-/**
- * Main initialization function.
- * Called once when the content script loads.
- */
+if (!isSupportedPage(window.location.href) || window.self !== window.top) {
+  // Exit early for chrome:// pages, iframes, etc.
+  throw new Error('[Content] Unsupported page — content script exiting');
+}
+
+// ============================================
+// Composition Root
+// Create all instances and wire them together
+// ============================================
+
+const eventManager = new EventManager();
+const mutationManager = new MutationManager();
+const messenger = new ContentMessenger();
+const contextDetector = new ContextDetector();
+
+// Selection system
+const selectionDetector = new SelectionDetector(eventManager);
+const selectionTracker = new SelectionTracker(messenger);
+
+// FAB system
+const fabManager = new FABManager(
+  eventManager,
+  (action: FABAction, selectedText: string) => {
+    handleFABAction(action, selectedText);
+  }
+);
+
+// Message router (receives all incoming messages)
+const messageRouter = new MessageRouter({
+  selectionTracker,
+  contextDetector,
+  fabManager,
+});
+
+// ============================================
+// Initialize
+// ============================================
+
 function initialize(): void {
-  console.info('[Content] Script initialized on:', window.location.hostname);
+  console.info('[Content] Initializing on:', window.location.hostname);
 
-  // Inject the sidebar React app into the page
+  // 1. Inject sidebar into page
   injectSidebar();
 
-  // Setup message listener for communication with popup/background
+  // 2. Initialize FAB
+  fabManager.initialize();
+
+  // 3. Start selection detection
+  selectionDetector.start();
+
+  // 4. Wire selection events → tracker and FAB
+  selectionDetector.onSelect((data) => {
+    selectionTracker.updateSelection(data);
+    fabManager.onTextSelected(data);
+  });
+
+  selectionDetector.onDeselect(() => {
+    selectionTracker.clearSelection();
+    fabManager.onTextDeselected();
+  });
+
+  // 5. Set up message listener (incoming from popup/background)
   setupMessageListener();
 
-  // Notify background that content script is ready
-  notifyReady();
+  // 6. Set up SPA navigation detection
+  setupSPADetection();
+
+  // 7. Detect page context
+  const context = contextDetector.detect();
+  console.info('[Content] Page context detected:', context.siteType);
+
+  // 8. Notify background that content script is ready
+  notifyReady(context.siteType);
+
+  // 9. Setup cleanup on page unload
+  window.addEventListener('beforeunload', cleanup);
+
+  console.info('[EduPilot AI] ✅ Initialization complete');
+  console.info('[EduPilot AI] Event listeners active:', eventManager.count);
 }
 
 // ============================================
 // Message Listener
 // ============================================
 
-/**
- * Listen for messages from the background service worker.
- * The background worker acts as the message broker —
- * messages from the popup come through background first.
- */
 function setupMessageListener(): void {
   chrome.runtime.onMessage.addListener(
     (
-      message: ExtensionMessage,
+      message: IncomingContentMessage,
       _sender: chrome.runtime.MessageSender,
-      sendResponse: (response: ExtensionResponse) => void
+      sendResponse: (response: unknown) => void
     ) => {
-      console.info('[Content] Message received:', message.type);
+      messageRouter
+        .route(message)
+        .then(sendResponse)
+        .catch((error: Error) => {
+          console.error('[EduPilot AI] Message routing error:', error);
+          sendResponse({ success: false, error: error.message });
+        });
 
-      // Process message and send response
-      handleContentMessage(message)
-        .then((data) => sendResponse({ success: true, data, requestId: message.requestId }))
-        .catch((error: Error) =>
-          sendResponse({
-            success: false,
-            error: error.message,
-            requestId: message.requestId,
-          })
-        );
-
-      // Return true for async response
-      return true;
+      return true; // Keep channel open for async
     }
   );
 }
 
 // ============================================
-// Message Dispatcher
+// SPA Navigation Detection
 // ============================================
 
-async function handleContentMessage(message: ExtensionMessage): Promise<unknown> {
-  switch (message.type) {
-    case 'PING':
-      return { alive: true, url: window.location.href };
+function setupSPADetection(): void {
+  // Watch for URL changes (YouTube, GitHub, etc.)
+  const cleanupURLObserver = mutationManager.observeURLChanges(
+    (newUrl, oldUrl) => {
+      console.info('[EduPilot AI] SPA navigation detected:', oldUrl, '→', newUrl);
 
-    case 'TOGGLE_SIDEBAR':
-      toggleSidebar();
-      return { toggled: true };
+      // Clear context cache for new page
+      contextDetector.clearCache();
 
-    case 'OPEN_SIDEBAR':
-      openSidebar();
-      return { opened: true };
+      // Re-detect context after DOM settles
+      setTimeout(() => {
+        const newContext = contextDetector.detect();
+        console.info('[EduPilot AI] New page context:', newContext.siteType);
 
-    case 'CLOSE_SIDEBAR':
-      closeSidebar();
-      return { closed: true };
+        // Notify background of context change
+        messenger.sendAndForget({
+          type: 'PAGE_CONTEXT_READY',
+          payload: newContext,
+        });
+      }, 500);
+    }
+  );
 
-    case 'GET_PAGE_CONTENT':
-      return extractPageContent();
-
-    case 'GET_SELECTED_TEXT':
-      return { selectedText: getSelectedText() };
-
-    default:
-      throw new Error(`Content script: unknown message type '${message.type}'`);
-  }
+  // Store cleanup for later
+  window.addEventListener('beforeunload', cleanupURLObserver);
 }
 
 // ============================================
-// Notify Background
+// FAB Action Handler
 // ============================================
 
-/**
- * Tell the background worker that this tab's content script is alive.
- * Useful for the popup to know if it can communicate with the page.
- */
-function notifyReady(): void {
-  chrome.runtime.sendMessage({
-    type: 'SIDEBAR_READY',
+function handleFABAction(action: FABAction, selectedText: string): void {
+  console.info('[EduPilot AI] FAB action triggered:', action, '| Text:', selectedText.slice(0, 50));
+
+  // Notify background of the action
+  messenger.sendToBackground({
+    type: 'FAB_ACTION_TRIGGERED',
     payload: {
+      action,
+      selectedText,
       url: window.location.href,
-      title: document.title,
     },
-  }).catch(() => {
-    // Background might not be ready yet — that's okay
-    // It will reconnect automatically
+  }).catch(console.warn);
+
+  // Open sidebar to show the action result
+  // (The actual AI processing happens in Module 5)
+  import('./sidebar-injector').then(({ openSidebar }) => {
+    openSidebar();
   });
+}
+
+// ============================================
+// Notify Background Worker
+// ============================================
+
+function notifyReady(siteType: string): void {
+  messenger
+    .sendToBackground({
+      type: 'CONTENT_SCRIPT_READY',
+      payload: {
+        url: window.location.href,
+        title: document.title,
+        siteType: siteType as never,
+      },
+    })
+    .catch(() => {
+      // Background might not be ready yet — that's fine
+    });
+}
+
+// ============================================
+// Cleanup
+// ============================================
+
+function cleanup(): void {
+  console.info('[EduPilot AI] Cleaning up event listeners...');
+
+  selectionDetector.stop();
+  fabManager.destroy();
+  eventManager.removeAll();
+  mutationManager.disconnectAll();
+
+  console.info('[EduPilot AI] ✅ Cleanup complete');
 }
 
 // ============================================
 // Bootstrap
 // ============================================
 
-// Guard against running in frames (iframes inside pages)
-if (window.self === window.top) {
+// Wait for DOM to be ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initialize);
+} else {
+  // DOM already ready (script runs at document_idle by default)
   initialize();
 }

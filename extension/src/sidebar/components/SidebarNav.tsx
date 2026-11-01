@@ -4,9 +4,9 @@
  */
 
 import React from 'react';
-import { FileText, HelpCircle, BookOpen, Zap } from 'lucide-react';
+import { FileText, HelpCircle, BookOpen, Zap,Layers } from 'lucide-react';
 import { cn } from '../../shared/utils/cn';
-import type { SidebarPanel } from '../../shared/types';
+import type { SidebarPanel } from '../../shared/types/types';
 
 // ============================================
 // Nav Items Config
@@ -39,6 +39,11 @@ const NAV_ITEMS: NavItem[] = [
     id: 'explain',
     label: 'Explain',
     icon: <Zap size={15} />,
+  },
+  {
+    id: 'flashcards',
+    label: 'Flashcards',
+    icon: <Layers size={15} />,
   },
 ];
 

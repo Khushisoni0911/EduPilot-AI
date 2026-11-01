@@ -28,16 +28,17 @@ const Header: React.FC = () => {
   }, []);
 
   return (
-    <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3 flex items-center justify-between shrink-0 shadow-md">
+   <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3 flex items-center justify-between shrink-0 shadow-md">
       {/* Logo + Branding */}
       <div className="flex items-center gap-2.5">
         <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center">
           <GraduationCap size={18} className="text-white" />
         </div>
         <div>
-          <h1 className="text-sm font-bold leading-none">AI Student Assistant</h1>
+          {/* ✅ CHANGED */}
+          <h1 className="text-sm font-bold leading-none">EduPilot AI</h1>
           <p className="text-[10px] text-blue-200 leading-none mt-0.5">
-            Powered by Gemini AI
+            AI-Powered Student Assistant
           </p>
         </div>
       </div>
