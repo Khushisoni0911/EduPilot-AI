@@ -364,6 +364,11 @@ ${text}
 
       const result = await model.generateContent(prompt);
       const rawResponse = result.response.text().trim();
+      console.log('[Gemini Quiz] Response diagnostics:', {
+  length: rawResponse.length,
+  startsWithFence: rawResponse.startsWith('```'),
+  startsWithJson: rawResponse.startsWith('{'),
+});
 
       let parsed: { questions?: unknown };
 
@@ -480,9 +485,13 @@ app.post('/api/ai/notes', authenticateToken, async (req, res) => {
     const notesModelName = process.env.GEMINI_NOTES_MODEL || GEMINI_MODEL;
     console.log('Smart Notes model:', notesModelName);
 
-    const model = genAI.getGenerativeModel({
-      model: notesModelName,
-    });
+const model = genAI.getGenerativeModel({
+  model: notesModelName,
+  generationConfig: {
+    temperature: 0.3,
+    maxOutputTokens: 2048,
+  },
+});
 
     const prompt = `
 You are an expert academic study-note assistant.
@@ -525,6 +534,7 @@ Requirements:
 
     const result = await model.generateContent(prompt);
     const rawResponse = result.response.text().trim();
+    
 
     const jsonText = rawResponse
       .replace(/^```json\s*/i, '')
