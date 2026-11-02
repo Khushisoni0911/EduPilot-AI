@@ -142,8 +142,25 @@ ${text}
 Return only the summary in readable text.
 `;
 
-      const result = await model.generateContent(prompt);
-      const summary = result.response.text().trim();
+const result = await (async () => {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await model.generateContent(prompt);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const retryable = /503|429|Service Unavailable|Too Many Requests|high demand/i.test(message);
+
+      if (!retryable || attempt === 3) {
+        throw error;
+      }
+
+      console.warn(`[Gemini Summary] Retry ${attempt + 1}/3 after temporary API error.`);
+      await new Promise(resolve => setTimeout(resolve, attempt * 2000));
+    }
+  }
+
+  throw new Error('Gemini Summary failed after retries.');
+})();      const summary = result.response.text().trim();
 
       if (!summary) {
         return res.status(502).json({
