@@ -373,7 +373,12 @@ ${text}
       let parsed: { questions?: unknown };
 
       try {
-        parsed = JSON.parse(rawResponse);
+       const jsonText = rawResponse
+  .replace(/^```(?:json)?\s*/i, '')
+  .replace(/\s*```$/, '')
+  .trim();
+
+parsed = JSON.parse(jsonText);
       } catch {
         console.error('[Gemini Quiz Error] Model returned invalid JSON.');
 
