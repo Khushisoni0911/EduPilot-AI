@@ -1,20 +1,15 @@
+
 /**
  * Sidebar Application Root Component
- *
- * This is the root of the sidebar React app that gets injected
- * into web pages. It manages:
- * - Overall sidebar layout
- * - Panel navigation (Summary, Quiz, Notes, etc.)
- * - Open/close animation state
- * - Communication with background worker
  */
+import React, { useState, useCallback, useEffect } from 'react';
 import AuthPage from '../popup/pages/AuthPage';
-import { getSession } from '../shared/utils/auth';
-import React, { useState, useCallback, useEffect  } from 'react';
+import { getSession, logout } from '../shared/utils/auth';
 import { sendToBackground } from '../shared/utils/messaging';
 import {
   DEFAULT_SETTINGS,
   type AppSettings,
+  type SidebarPanel,
 } from '../shared/types/types';
 
 import SidebarContainer from './components/SidebarContainer';
@@ -25,108 +20,121 @@ import QuizPanel from './panels/QuizPanel';
 import NotesPanel from './panels/NotesPanel';
 import ExplainPanel from './panels/ExplainPanel';
 import FlashcardsPanel from './panels/FlashcardsPanel';
-import type { SidebarPanel } from '../shared/types/types';
-
-// ============================================
-// Props Interface
-// ============================================
 
 interface SidebarAppProps {
   isOpen: boolean;
   onClose: () => void;
-   initialPanel?: SidebarPanel;
+  initialPanel?: SidebarPanel;
 }
-
-// ============================================
-// Component
-// ============================================
 
 const SidebarApp: React.FC<SidebarAppProps> = ({
   isOpen,
   onClose,
   initialPanel = 'summary',
 }) => {
-  const [activePanel, setActivePanel] = useState<SidebarPanel>(initialPanel);
+  const [activePanel, setActivePanel] =
+    useState<SidebarPanel>(initialPanel);
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] =
+    useState<AppSettings>(DEFAULT_SETTINGS);
+
   const [isDark, setIsDark] = useState(false);
-useEffect(() => {
-  let mounted = true;
 
-  const checkAuth = async () => {
-    try {
-      const session = await getSession();
-
-      if (mounted) {
-        setIsAuthenticated(session !== null);
-      }
-    } catch (error) {
-      console.error('[EduPilot Auth] Session check failed:', error);
-
-      if (mounted) {
-        setIsAuthenticated(false);
-      }
-    } finally {
-      if (mounted) {
-        setIsCheckingAuth(false);
-      }
-    }
-  };
-
-  void checkAuth();
-
-  return () => {
-    mounted = false;
-  };
-}, []);
-useEffect(() => {
-  let mounted = true;
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       const response = await sendToBackground<undefined, AppSettings>(
         'GET_SETTINGS'
       );
 
-      if (mounted && response.success && response.data) {
-        setSettings({ ...DEFAULT_SETTINGS, ...response.data });
+      if (response.success && response.data) {
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          ...response.data,
+        });
       }
     } catch (error) {
       console.error('[EduPilot Theme] Failed to load settings:', error);
     }
-  };
-
-  void loadSettings();
-
-  return () => {
-    mounted = false;
-  };
-}, []);
-
-
-
-   const handlePanelChange = useCallback((panel: SidebarPanel) => {
-    setActivePanel(panel);
   }, []);
 
+  // Check authentication.
   useEffect(() => {
-    const applyTheme = () => {
-      const prefersDark = window.matchMedia(
-        '(prefers-color-scheme: dark)'
-      ).matches;
+    let mounted = true;
 
-      const shouldUseDark =
-        settings.theme === 'dark' ||
-        (settings.theme === 'system' && prefersDark);
+    const checkAuth = async () => {
+      try {
+        const session = await getSession();
 
-      setIsDark(shouldUseDark);
+        if (mounted) {
+          setIsAuthenticated(session !== null);
+        }
+      } catch (error) {
+        console.error('[EduPilot Auth] Session check failed:', error);
+
+        if (mounted) {
+          setIsAuthenticated(false);
+        }
+      } finally {
+        if (mounted) {
+          setIsCheckingAuth(false);
+        }
+      }
     };
 
+    void checkAuth();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Load settings and listen for changes.
+  useEffect(() => {
+    void loadSettings();
+
+    const handleStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (areaName !== 'sync' && areaName !== 'local') return;
+
+      if (
+        'edupilot_auth_token' in changes ||
+        'edupilot_auth_user' in changes
+      ) {
+        const token = changes.edupilot_auth_token?.newValue;
+        const user = changes.edupilot_auth_user?.newValue;
+
+        setIsAuthenticated(Boolean(token && user));
+      }
+
+      // Reload preferences when extension storage changes.
+      void loadSettings();
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, [loadSettings]);
+
+  // Apply Light / Dark / System preference.
+  useEffect(() => {
     const mediaQuery = window.matchMedia(
       '(prefers-color-scheme: dark)'
     );
+
+    const applyTheme = () => {
+      const shouldUseDark =
+        settings.theme === 'dark' ||
+        (settings.theme === 'system' && mediaQuery.matches);
+
+      setIsDark(shouldUseDark);
+    };
 
     applyTheme();
     mediaQuery.addEventListener('change', applyTheme);
@@ -136,47 +144,62 @@ useEffect(() => {
     };
   }, [settings.theme]);
 
-  if (!isOpen) return null;
-  if (isCheckingAuth) {
-  return (
-    <div className="flex h-full items-center justify-center bg-gray-50">
-      <p className="text-sm text-gray-500">Checking your session...</p>
-    </div>
-  );
-}
+  const handleLogout = useCallback(async () => {
+    await logout();
+    setIsAuthenticated(false);
+  }, []);
 
-if (!isAuthenticated) {
-  return (
-    <div className="h-full overflow-y-auto">
-      <AuthPage onAuthenticated={() => setIsAuthenticated(true)} />
-    </div>
-  );
-}
+  const handlePanelChange = useCallback((panel: SidebarPanel) => {
+    setActivePanel(panel);
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setActivePanel('summary');
+    }
+  }, [isAuthenticated]);
+
+  if (!isOpen) return null;
 
   return (
     <div
-      className={isDark ? 'dark h-full' : 'h-full'}
+      className={`${isDark ? 'dark' : ''} h-full min-h-0`}
       style={{
         height: '100%',
-        backgroundColor: isDark ? '#111827' : '#ffffff',
-        color: isDark ? '#f9fafb' : '#111827',
+        colorScheme: isDark ? 'dark' : 'light',
       }}
     >
       <SidebarContainer>
-        <SidebarHeader onClose={onClose} />
+        {isCheckingAuth ? (
+          <div className="flex h-full items-center justify-center bg-gray-50 text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+            <p className="text-sm">Checking your session...</p>
+          </div>
+        ) : !isAuthenticated ? (
+          <div className="h-full min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+            <AuthPage
+              onAuthenticated={() => setIsAuthenticated(true)}
+            />
+          </div>
+        ) : (
+          <>
+            <SidebarHeader
+              onClose={onClose}
+            />
 
-        <SidebarNav
-          activePanel={activePanel}
-          onPanelChange={handlePanelChange}
-        />
+            <SidebarNav
+              activePanel={activePanel}
+              onPanelChange={handlePanelChange}
+            />
 
-        <div className="flex-1 overflow-y-auto">
-          {activePanel === 'summary' && <SummaryPanel />}
-          {activePanel === 'quiz' && <QuizPanel />}
-          {activePanel === 'notes' && <NotesPanel />}
-          {activePanel === 'explain' && <ExplainPanel />}
-          {activePanel === 'flashcards' && <FlashcardsPanel />}
-        </div>
+            <div className="min-h-0 flex-1 overflow-y-auto bg-white dark:bg-gray-900">
+              {activePanel === 'summary' && <SummaryPanel />}
+              {activePanel === 'quiz' && <QuizPanel />}
+              {activePanel === 'notes' && <NotesPanel />}
+              {activePanel === 'explain' && <ExplainPanel />}
+              {activePanel === 'flashcards' && <FlashcardsPanel />}
+            </div>
+          </>
+        )}
       </SidebarContainer>
     </div>
   );

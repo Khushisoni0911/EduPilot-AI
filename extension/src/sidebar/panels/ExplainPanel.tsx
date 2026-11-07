@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { authenticatedFetch } from '../../shared/utils/auth';
+import ReactMarkdown from 'react-markdown';
 
-const API_BASE_URL = 'http://localhost:5001/api/ai';
+const API_BASE_URL = 'https://edupilot-ai-backend-zrka.onrender.com/api/ai';
 
 const ExplainPanel: React.FC = () => {
   const [topic, setTopic] = useState('');
@@ -82,14 +83,16 @@ const ExplainPanel: React.FC = () => {
         </div>
       )}
 
-      {explanation && (
-        <section className="rounded-lg border border-gray-200 p-4">
-          <h3 className="font-semibold mb-2">Explanation</h3>
-          <div className="whitespace-pre-wrap text-sm leading-6">
-            {explanation}
-          </div>
-        </section>
-      )}
+     {explanation && (
+  <section className="rounded-lg border border-gray-200 p-4">
+    <h3 className="font-semibold mb-2">Explanation</h3>
+    <div className="text-sm leading-6">
+      <ReactMarkdown>
+        {explanation}
+      </ReactMarkdown>
+    </div>
+  </section>
+)}
     </div>
   );
 };

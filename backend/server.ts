@@ -30,7 +30,7 @@ import {
  * Better to crash immediately with a clear message than
  * fail silently later in a confusing way.
  */
-const requiredEnvVars = ['PORT', 'MONGODB_URI', 'JWT_SECRET', 'GEMINI_API_KEY'];
+const requiredEnvVars = [ 'MONGODB_URI', 'JWT_SECRET', 'GEMINI_API_KEY'];
 
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
@@ -44,8 +44,8 @@ for (const envVar of requiredEnvVars) {
 // Server Startup
 // ============================================
 
-const PORT = parseInt(process.env.PORT || '5000', 10);
-
+const PORT = parseInt(process.env.PORT || '5001', 10);
+const HOST = '0.0.0.0';
 async function startServer(): Promise<void> {
   try {
         // Connect to MongoDB before starting the server
@@ -54,7 +54,7 @@ async function startServer(): Promise<void> {
     const app = await createApp();
 
     // Start listening for requests
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, HOST, () => {
       console.info(`
 ╔══════════════════════════════════════════╗
 ║     AI Student Assistant — Backend       ║

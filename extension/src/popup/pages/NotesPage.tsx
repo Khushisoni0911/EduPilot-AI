@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
@@ -31,33 +32,33 @@ const NotesPage: React.FC = () => {
   const [notice, setNotice] = useState('');
 
   const [sourceUrl, setSourceUrl] = useState('');
-const [sourceTitle, setSourceTitle] = useState('');
-const [isAttachingPage, setIsAttachingPage] = useState(false);
+  const [sourceTitle, setSourceTitle] = useState('');
+  const [isAttachingPage, setIsAttachingPage] = useState(false);
 
-const handleAttachCurrentPage = async () => {
-  setIsAttachingPage(true);
-  setError('');
-  setNotice('');
+  const handleAttachCurrentPage = async () => {
+    setIsAttachingPage(true);
+    setError('');
+    setNotice('');
 
-  try {
-    const response = await sendToBackground<undefined, TabInfo>(
-      'GET_ACTIVE_TAB_INFO'
-    );
+    try {
+      const response = await sendToBackground<undefined, TabInfo>(
+        'GET_ACTIVE_TAB_INFO'
+      );
 
-    if (!response.success || !response.data?.url) {
-      setError('Could not retrieve the current webpage.');
-      return;
+      if (!response.success || !response.data?.url) {
+        setError('Could not retrieve the current webpage.');
+        return;
+      }
+
+      setSourceUrl(response.data.url);
+      setSourceTitle(response.data.title || response.data.url);
+      setNotice('Current webpage attached to your note.');
+    } catch {
+      setError('Could not retrieve the current webpage. Please try again.');
+    } finally {
+      setIsAttachingPage(false);
     }
-
-    setSourceUrl(response.data.url);
-    setSourceTitle(response.data.title || response.data.url);
-    setNotice('Current webpage attached to your note.');
-  } catch {
-    setError('Could not retrieve the current webpage. Please try again.');
-  } finally {
-    setIsAttachingPage(false);
-  }
-};
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -98,6 +99,7 @@ const handleAttachCurrentPage = async () => {
     setTitle('');
     setContent('');
     setSourceUrl('');
+    setSourceTitle('');
     setError('');
     setNotice('');
   };
@@ -107,6 +109,7 @@ const handleAttachCurrentPage = async () => {
     setTitle(note.title);
     setContent(note.content);
     setSourceUrl(note.sourceUrl ?? '');
+    setSourceTitle(note.sourceTitle ?? '');
     setError('');
     setNotice('');
   };
@@ -121,15 +124,15 @@ const handleAttachCurrentPage = async () => {
 
     const now = Date.now();
 
-   const note: Note = {
-     id: selectedNote?.id ?? crypto.randomUUID(),
-     title: title.trim() || 'Untitled note',
-  content: content.trim(),
-  sourceUrl: sourceUrl || undefined,
-  sourceTitle: sourceTitle || undefined,
-  createdAt: selectedNote?.createdAt ?? now,
-  updatedAt: now,
-};
+    const note: Note = {
+      id: selectedNote?.id ?? crypto.randomUUID(),
+      title: title.trim() || 'Untitled note',
+      content: content.trim(),
+      sourceUrl: sourceUrl || undefined,
+      sourceTitle: sourceTitle || undefined,
+      createdAt: selectedNote?.createdAt ?? now,
+      updatedAt: now,
+    };
 
     try {
       await saveNote(note);
@@ -167,6 +170,7 @@ const handleAttachCurrentPage = async () => {
       await navigator.clipboard.writeText(
         `${note.title}\n\n${note.content}`
       );
+
       setNotice('Note copied to clipboard.');
       setError('');
     } catch {
@@ -183,19 +187,23 @@ const handleAttachCurrentPage = async () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center p-8 text-sm text-gray-500">
+      <div className="flex h-full items-center justify-center bg-gray-50 p-8 text-sm text-gray-500 dark:bg-slate-900 dark:text-slate-300">
         Loading your notes...
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col bg-gray-50 text-gray-800">
-      <div className="border-b border-gray-200 bg-white p-4">
+    <div className="flex h-full flex-col bg-gray-50 text-gray-800 dark:bg-slate-900 dark:text-slate-100">
+
+      {/* Header */}
+      <div className="border-b border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen size={19} className="text-amber-500" />
-            <h2 className="text-base font-semibold">Your Notes</h2>
+            <h2 className="text-base font-semibold text-gray-800 dark:text-slate-100">
+              Your Notes
+            </h2>
           </div>
 
           <button
@@ -209,20 +217,24 @@ const handleAttachCurrentPage = async () => {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3">
-          <Search size={15} className="text-gray-400" />
+        {/* Search */}
+        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 dark:border-slate-600 dark:bg-slate-700">
+          <Search size={15} className="text-gray-400 dark:text-slate-400" />
+
           <input
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search your notes..."
             aria-label="Search notes"
-            className="w-full bg-transparent py-2.5 text-sm outline-none"
+            className="w-full bg-transparent py-2.5 text-sm text-gray-800 outline-none placeholder:text-gray-400 dark:text-slate-100 dark:placeholder:text-slate-400"
           />
+
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
               aria-label="Clear search"
+              className="text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-white"
             >
               <X size={14} />
             </button>
@@ -230,87 +242,67 @@ const handleAttachCurrentPage = async () => {
         </div>
       </div>
 
+      {/* Notifications */}
       {(error || notice) && (
         <div
           role={error ? 'alert' : 'status'}
           className={`mx-4 mt-3 rounded-lg px-3 py-2 text-xs ${
             error
-              ? 'bg-red-50 text-red-700'
-              : 'bg-green-50 text-green-700'
+              ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300'
+              : 'bg-green-50 text-green-700 dark:bg-emerald-950 dark:text-emerald-300'
           }`}
         >
           {error || notice}
         </div>
       )}
 
+      {/* Content */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto p-4">
+
+        {/* Note Editor */}
         <form
           onSubmit={handleSave}
-          className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4"
+          className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800"
         >
-        <div className="flex items-center justify-between">
-  <h3 className="text-sm font-semibold">
-    {selectedNote ? 'Edit note' : 'Create a note'}
-  </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-100">
+              {selectedNote ? 'Edit note' : 'Create a note'}
+            </h3>
 
-  <div className="flex items-center gap-2">
-    <button
-      type="button"
-      onClick={handleAttachCurrentPage}
-      disabled={isAttachingPage}
-      className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
-    >
-      {isAttachingPage ? 'Attaching...' : 'Attach Current Page'}
-    </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAttachCurrentPage}
+                disabled={isAttachingPage}
+                className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-slate-700"
+              >
+                {isAttachingPage ? 'Attaching...' : 'Attach Current Page'}
+              </button>
 
-    {selectedNote && (
-      <button
-        type="button"
-        onClick={startNewNote}
-        className="text-xs text-gray-500 hover:text-gray-800"
-      >
-        <ArrowLeft size={14} className="mr-1 inline" />
-        New
-      </button>
-    )}
-  </div>
-</div><div className="flex items-center justify-between">
-  <h3 className="text-sm font-semibold">
-    {selectedNote ? 'Edit note' : 'Create a note'}
-  </h3>
+              {selectedNote && (
+                <button
+                  type="button"
+                  onClick={startNewNote}
+                  className="text-xs text-gray-500 hover:text-gray-800 dark:text-slate-400 dark:hover:text-white"
+                >
+                  <ArrowLeft size={14} className="mr-1 inline" />
+                  New
+                </button>
+              )}
+            </div>
+          </div>
 
-  <div className="flex items-center gap-2">
-    <button
-      type="button"
-      onClick={handleAttachCurrentPage}
-      disabled={isAttachingPage}
-      className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
-    >
-      {isAttachingPage ? 'Attaching...' : 'Attach Current Page'}
-    </button>
-
-    {selectedNote && (
-      <button
-        type="button"
-        onClick={startNewNote}
-        className="text-xs text-gray-500 hover:text-gray-800"
-      >
-        <ArrowLeft size={14} className="mr-1 inline" />
-        New
-      </button>
-    )}
-  </div>
-</div>
-
+          {/* Title */}
           <input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="Note title"
             aria-label="Note title"
             maxLength={200}
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-blue-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder:text-slate-400"
           />
 
+          {/* Content */}
           <textarea
             value={content}
             onChange={(event) => setContent(event.target.value)}
@@ -318,7 +310,7 @@ const handleAttachCurrentPage = async () => {
             aria-label="Note content"
             rows={5}
             maxLength={50000}
-            className="min-h-28 resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm leading-relaxed outline-none focus:border-blue-400"
+            className="min-h-28 resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm leading-relaxed text-gray-800 outline-none focus:border-blue-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder:text-slate-400"
           />
 
           <button
@@ -330,28 +322,32 @@ const handleAttachCurrentPage = async () => {
           </button>
         </form>
 
+        {/* Saved Notes */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-100">
               Saved notes ({filteredNotes.length})
             </h3>
+
             {searchQuery && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-500 dark:text-slate-400">
                 Filtered results
               </span>
             )}
           </div>
 
           {filteredNotes.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white px-5 py-8 text-center">
+            <div className="rounded-xl border border-dashed border-gray-300 bg-white px-5 py-8 text-center dark:border-slate-600 dark:bg-slate-800">
               <BookOpen
                 size={25}
-                className="mx-auto mb-3 text-gray-400"
+                className="mx-auto mb-3 text-gray-400 dark:text-slate-500"
               />
-              <p className="text-sm font-medium text-gray-700">
+
+              <p className="text-sm font-medium text-gray-700 dark:text-slate-200">
                 {searchQuery ? 'No matching notes' : 'No notes yet'}
               </p>
-              <p className="mt-1 text-xs leading-relaxed text-gray-500">
+
+              <p className="mt-1 text-xs leading-relaxed text-gray-500 dark:text-slate-400">
                 {searchQuery
                   ? 'Try another search term.'
                   : 'Create your first note above. Your notes will be saved in Chrome.'}
@@ -361,10 +357,10 @@ const handleAttachCurrentPage = async () => {
             filteredNotes.map((note) => (
               <article
                 key={note.id}
-                className={`rounded-xl border bg-white p-3 ${
+                className={`rounded-xl border bg-white p-3 dark:bg-slate-800 ${
                   selectedNote?.id === note.id
-                    ? 'border-blue-300 ring-1 ring-blue-100'
-                    : 'border-gray-200'
+                    ? 'border-blue-300 ring-1 ring-blue-100 dark:border-blue-500 dark:ring-blue-900'
+                    : 'border-gray-200 dark:border-slate-700'
                 }`}
               >
                 <button
@@ -372,11 +368,11 @@ const handleAttachCurrentPage = async () => {
                   onClick={() => startEditing(note)}
                   className="block w-full text-left"
                 >
-                  <h4 className="break-words text-sm font-semibold">
+                  <h4 className="break-words text-sm font-semibold text-gray-800 dark:text-slate-100">
                     {note.title}
                   </h4>
 
-                  <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-gray-600">
+                  <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-gray-600 dark:text-slate-300">
                     {note.content.length > 180
                       ? `${note.content.slice(0, 180)}…`
                       : note.content || 'No content'}
@@ -384,13 +380,13 @@ const handleAttachCurrentPage = async () => {
                 </button>
 
                 {note.sourceTitle && (
-                  <p className="mt-2 truncate text-xs text-blue-600">
+                  <p className="mt-2 truncate text-xs text-blue-600 dark:text-blue-400">
                     Source: {note.sourceTitle}
                   </p>
                 )}
 
-                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2">
-                  <span className="text-[10px] text-gray-400">
+                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2 dark:border-slate-700">
+                  <span className="text-[10px] text-gray-400 dark:text-slate-500">
                     Updated {formatDate(note.updatedAt)}
                   </span>
 
@@ -400,7 +396,7 @@ const handleAttachCurrentPage = async () => {
                       onClick={() => startEditing(note)}
                       aria-label={`Edit ${note.title}`}
                       title="Edit note"
-                      className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-blue-600"
+                      className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-blue-400"
                     >
                       <Pencil size={14} />
                     </button>
@@ -410,7 +406,7 @@ const handleAttachCurrentPage = async () => {
                       onClick={() => void handleCopy(note)}
                       aria-label={`Copy ${note.title}`}
                       title="Copy note"
-                      className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-blue-600"
+                      className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-blue-600 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-blue-400"
                     >
                       <Copy size={14} />
                     </button>
@@ -420,7 +416,7 @@ const handleAttachCurrentPage = async () => {
                       onClick={() => void handleDelete(note)}
                       aria-label={`Delete ${note.title}`}
                       title="Delete note"
-                      className="rounded-md p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                      className="rounded-md p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-950 dark:hover:text-red-400"
                     >
                       <Trash2 size={14} />
                     </button>

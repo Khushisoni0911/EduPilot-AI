@@ -140,10 +140,9 @@ const handleQuickAction = async (action: typeof QUICK_ACTIONS[number]) => {
   const isPageSupported = tabInfo?.isSupported ?? false;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
       {/* ── Current Page Info ─────────────────────── */}
-      <div className="px-4 py-3 bg-white border-b border-gray-100">
-        <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-1.5">
+<div className="px-4 py-3 bg-white border-b border-gray-100 dark:bg-slate-800 dark:border-slate-700">        <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-1.5">
           Current Page
         </p>
         {isLoadingTab ? (
@@ -155,7 +154,7 @@ const handleQuickAction = async (action: typeof QUICK_ACTIONS[number]) => {
           <div className="flex items-start gap-2">
             <Globe size={13} className="text-gray-400 mt-0.5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-gray-800 truncate" title={tabInfo.title}>
+              <p className="text-xs font-medium text-gray-800 dark:text-slate-100 truncate" title={tabInfo.title}>
                 {tabInfo.title}
               </p>
               <p className="text-[10px] text-gray-400 truncate" title={tabInfo.url}>
@@ -178,8 +177,7 @@ const handleQuickAction = async (action: typeof QUICK_ACTIONS[number]) => {
       </div>
 
       {/* ── Open Sidebar CTA ──────────────────────── */}
-      <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
-        <button
+<div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800">        <button
           onClick={handleToggleSidebar}
           disabled={!isPageSupported || sidebarStatus === 'opening'}
           className={cn(
@@ -217,8 +215,7 @@ const handleQuickAction = async (action: typeof QUICK_ACTIONS[number]) => {
 
       {/* ── Quick Actions Grid ────────────────────── */}
       <div className="px-4 py-3 flex-1">
-        <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-2.5">
-          Quick Actions
+<p className="text-[10px] text-gray-400 dark:text-slate-400 uppercase tracking-wide font-medium mb-2.5">          Quick Actions
         </p>
         <div className="grid grid-cols-2 gap-2">
           {QUICK_ACTIONS.map((action) => {
@@ -234,8 +231,7 @@ const handleQuickAction = async (action: typeof QUICK_ACTIONS[number]) => {
                   'focus:outline-none focus:ring-2 focus:ring-offset-1',
                   isPageSupported
                     ? cn(colorMap[action.color], 'cursor-pointer')
-                    : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
-                )}
+: 'bg-gray-50 text-gray-300 border-gray-100 dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700 cursor-not-allowed'                )}
               >
                 <Icon size={16} />
                 <div>

@@ -27,7 +27,7 @@ interface AuthResponse {
   user?: AuthUser;
 }
 
-const API_BASE_URL = 'http://localhost:5001/api/auth';
+const API_BASE_URL = 'https://edupilot-ai-backend-zrka.onrender.com/api/auth';
 
 /**
  * Register a new student account.

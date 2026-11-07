@@ -41,7 +41,7 @@ const QuizPanel: React.FC = () => {
       }
 
 const response = await authenticatedFetch(
-          'http://localhost:5001/api/ai/quiz',
+          'https://edupilot-ai-backend-zrka.onrender.com/api/ai/quiz',
         {
           method: 'POST',
           headers: {

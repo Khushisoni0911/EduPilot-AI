@@ -175,7 +175,7 @@ npm run dev
 Backend health check:
 
 ```text
-http://localhost:5001/health
+https://edupilot-ai-backend-zrka.onrender.com/health
 ```
 
 ### 5. Build the Chrome extension

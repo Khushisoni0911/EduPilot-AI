@@ -10,7 +10,7 @@ interface PageContent {
   wordCount: number;
 }
 
-const API_BASE_URL = 'http://localhost:5001/api/ai';
+const API_BASE_URL = 'https://edupilot-ai-backend-zrka.onrender.com/api/ai';
 
 const SummaryPanel: React.FC = () => {
   const [summary, setSummary] = useState('');

@@ -13,6 +13,10 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  LogOut,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react';
 
 import { sendToBackground } from '../../shared/utils/messaging';
@@ -20,12 +24,23 @@ import {
   DEFAULT_SETTINGS,
   type AppSettings,
 } from '../../shared/types/types';
-const SettingsPage: React.FC = () => {
+import { logout } from '../../shared/utils/auth';
+
+interface SettingsPageProps {
+  theme: AppSettings['theme'];
+  onThemeChange: (theme: AppSettings['theme']) => void;
+}
+
+const SettingsPage: React.FC<SettingsPageProps> = ({
+  theme,
+  onThemeChange,
+}) => {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -41,16 +56,20 @@ const SettingsPage: React.FC = () => {
         }
 
         if (isMounted && response.data) {
-          setSettings({ ...DEFAULT_SETTINGS, ...response.data });
+          const loadedSettings = {
+            ...DEFAULT_SETTINGS,
+            ...response.data,
+          };
+
+          setSettings(loadedSettings);
+          onThemeChange(loadedSettings.theme);
         }
       } catch {
         if (isMounted) {
           setError('Could not load saved settings. Default values are shown.');
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -59,7 +78,7 @@ const SettingsPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [onThemeChange]);
 
   const updateSetting = <K extends keyof AppSettings>(
     key: K,
@@ -70,142 +89,210 @@ const SettingsPage: React.FC = () => {
     setError('');
   };
 
-  
-const handleSave = async () => {
-  setIsSaving(true);
-  setNotice('');
-  setError('');
+  const handleSave = async () => {
+    setIsSaving(true);
+    setNotice('');
+    setError('');
 
-  try {
-    const response = await sendToBackground<AppSettings, void>(
-      'SAVE_SETTINGS',
-      settings
-    );
+    try {
+      const response = await sendToBackground<AppSettings, void>(
+        'SAVE_SETTINGS',
+        settings
+      );
 
-    if (!response.success) {
-      throw new Error(response.error || 'Could not save settings.');
+      if (!response.success) {
+        throw new Error(response.error || 'Could not save settings.');
+      }
+
+      const verifyResponse = await sendToBackground<undefined, AppSettings>(
+        'GET_SETTINGS'
+      );
+
+      if (!verifyResponse.success || !verifyResponse.data) {
+        throw new Error('Settings were sent, but verification failed.');
+      }
+
+      const verifiedSettings = {
+        ...DEFAULT_SETTINGS,
+        ...verifyResponse.data,
+      };
+
+      setSettings(verifiedSettings);
+      onThemeChange(verifiedSettings.theme);
+      setNotice('Your settings have been saved successfully!');
+    } catch (err) {
+      console.error('[EduPilot Settings] Save failed:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Could not save settings. Please try again.'
+      );
+    } finally {
+      setIsSaving(false);
     }
+  };
 
-    const verifyResponse = await sendToBackground<undefined, AppSettings>(
-      'GET_SETTINGS'
-    );
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    setNotice('');
+    setError('');
 
-    if (!verifyResponse.success || !verifyResponse.data) {
-      throw new Error('Settings were sent, but verification failed.');
+    try {
+      await logout();
+      setNotice('Logged out successfully.');
+    } catch {
+      setError('Could not log out. Please try again.');
+    } finally {
+      setIsLoggingOut(false);
     }
-
-    setSettings(verifyResponse.data);
-    setNotice('Settings saved and verified successfully.');
-  } catch (error) {
-    console.error('[EduPilot Settings] Save failed:', error);
-    setError(
-      error instanceof Error
-        ? error.message
-        : 'Could not save settings. Please try again.'
-    );
-  } finally {
-    setIsSaving(false);
-  }
-};
-
+  };
 
   const handleReset = () => {
     setSettings({ ...DEFAULT_SETTINGS });
+    onThemeChange(DEFAULT_SETTINGS.theme);
     setNotice('');
     setError('');
   };
 
   const selectClass =
-    'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100';
+    'mt-2 block w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:focus:border-blue-400 dark:focus:bg-slate-700 dark:focus:ring-blue-900/40';
 
-  const sectionClass = 'rounded-xl border border-gray-200 bg-white p-4';
+  const cardClass =
+    'min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-800';
 
   const toggleClass = (enabled: boolean) =>
-    `relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-      enabled ? 'bg-blue-600' : 'bg-gray-300'
+    `relative flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800 ${
+      enabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'
     }`;
+
+  const sectionHeading = (
+    icon: React.ReactNode,
+    title: string,
+    subtitle: string
+  ) => (
+    <div className="mb-4 flex min-w-0 items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+          {title}
+        </h3>
+        <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+          {subtitle}
+        </p>
+      </div>
+    </div>
+  );
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center gap-2 text-sm text-gray-500">
-        <Loader2 size={18} className="animate-spin" />
-        Loading settings...
+      <div className="flex h-full min-w-0 items-center justify-center gap-3 bg-slate-50 text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+        <Loader2 size={20} className="animate-spin text-blue-600" />
+        Loading your settings...
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 p-4 text-gray-800">
-      <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
-          <Settings size={22} className="text-blue-600" />
-        </div>
+    <div className="box-border h-full min-h-0 w-full min-w-0 overflow-y-auto overflow-x-hidden bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
 
-        <div>
-          <h2 className="text-base font-semibold">Settings</h2>
-          <p className="text-xs text-gray-500">
-            Personalize your EduPilot experience
-          </p>
+      {/* Header */}
+      <div className="border-b border-slate-200 bg-white px-5 py-5 dark:border-slate-700 dark:bg-slate-800">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
+            <Settings size={23} />
+          </div>
+
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+              Settings
+            </h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Manage your EduPilot experience
+            </p>
+          </div>
         </div>
       </div>
 
-      {error && (
-        <div
-          role="alert"
-          className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700"
-        >
-          <AlertCircle size={16} className="mt-0.5 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      {/* Content */}
+      <div className="min-w-0 space-y-4 px-4 pb-5 pt-5">
 
-      {notice && (
-        <div
-          role="status"
-          className="mb-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-xs text-green-700"
-        >
-          <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-          <span>{notice}</span>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        <section className={sectionClass}>
-          <div className="mb-4 flex items-center gap-2">
-            <Palette size={17} className="text-blue-600" />
-            <h3 className="text-sm font-semibold">Appearance</h3>
+        {error && (
+          <div
+            role="alert"
+            className="flex min-w-0 items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300"
+          >
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+            <span className="min-w-0 break-words">{error}</span>
           </div>
+        )}
 
-          <label className="block text-xs font-medium text-gray-600">
-            Theme
-            <select
-              value={settings.theme}
-              onChange={(event) =>
-                updateSetting(
-                  'theme',
-                  event.target.value as AppSettings['theme']
-                )
-              }
-              className={selectClass}
-            >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="system">Follow system preference</option>
-            </select>
-          </label>
-          <p className="mt-1 text-xs text-gray-400">
-            Saves your preferred theme. Applying it across the interface
-            requires theme support in the UI.
+        {notice && (
+          <div
+            role="status"
+            className="flex min-w-0 items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300"
+          >
+            <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
+            <span className="min-w-0 break-words">{notice}</span>
+          </div>
+        )}
+
+        {/* Appearance */}
+        <section className={cardClass}>
+          {sectionHeading(
+            <Palette size={19} />,
+            'Appearance',
+            'Choose your preferred visual experience'
+          )}
+
+          <p className="mb-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Interface theme
           </p>
+
+          <div className="grid min-w-0 grid-cols-3 gap-2">
+            {[
+              { value: 'light', label: 'Light', icon: Sun },
+              { value: 'dark', label: 'Dark', icon: Moon },
+              { value: 'system', label: 'System', icon: Monitor },
+            ].map(({ value, label, icon: Icon }) => {
+              const selected = theme === value;
+
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    const selectedTheme = value as AppSettings['theme'];
+                    updateSetting('theme', selectedTheme);
+                    onThemeChange(selectedTheme);
+                  }}
+                  className={`flex min-w-0 flex-col items-center gap-2 rounded-xl border p-3 transition ${
+                    selected
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-100 dark:border-blue-400 dark:bg-blue-950/60 dark:text-blue-300 dark:ring-blue-900'
+                      : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-blue-200 hover:bg-blue-50/50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  <Icon size={19} />
+                  <span className="text-[11px] font-semibold">{label}</span>
+                  {selected && (
+                    <CheckCircle2 size={13} className="text-blue-600 dark:text-blue-400" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </section>
 
-        <section className={sectionClass}>
-          <div className="mb-4 flex items-center gap-2">
-            <PanelRight size={17} className="text-blue-600" />
-            <h3 className="text-sm font-semibold">Sidebar</h3>
-          </div>
+        {/* Sidebar */}
+        <section className={cardClass}>
+          {sectionHeading(
+            <PanelRight size={19} />,
+            'Sidebar',
+            'Customize your assistant workspace'
+          )}
 
-          <label className="block text-xs font-medium text-gray-600">
+          <label className="block min-w-0 text-xs font-semibold text-slate-600 dark:text-slate-300">
             Sidebar position
             <select
               value={settings.sidebarPosition}
@@ -217,35 +304,50 @@ const handleSave = async () => {
               }
               className={selectClass}
             >
-              <option value="right">Right</option>
-              <option value="left">Left</option>
+              <option value="right">Right side</option>
+              <option value="left">Left side</option>
             </select>
           </label>
 
-          <label className="mt-4 block text-xs font-medium text-gray-600">
-            Sidebar width: {settings.sidebarWidth}px
-            <input
-              type="range"
-              min={300}
-              max={600}
-              step={10}
-              value={settings.sidebarWidth}
-              onChange={(event) =>
-                updateSetting('sidebarWidth', Number(event.target.value))
-              }
-              className="mt-3 w-full accent-blue-600"
-            />
-            <span className="mt-1 flex justify-between text-[10px] text-gray-400">
+          {/* Width slider */}
+          <div className="mt-5 min-w-0">
+            <div className="mb-2 flex min-w-0 items-center justify-between gap-3">
+              <label className="min-w-0 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                Sidebar width
+              </label>
+              <span className="shrink-0 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                {settings.sidebarWidth}px
+              </span>
+            </div>
+
+            <div className="w-full min-w-0 overflow-hidden">
+              <input
+                type="range"
+                min={300}
+                max={600}
+                step={10}
+                value={settings.sidebarWidth}
+                onChange={(event) =>
+                  updateSetting('sidebarWidth', Number(event.target.value))
+                }
+                className="block h-6 w-full max-w-full min-w-0 cursor-pointer appearance-none accent-blue-600"
+              />
+            </div>
+
+            <div className="flex w-full min-w-0 justify-between text-[10px] font-medium text-slate-400">
               <span>300 px</span>
               <span>600 px</span>
-            </span>
-          </label>
+            </div>
+          </div>
 
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium">Auto-open sidebar</p>
-              <p className="mt-1 text-xs text-gray-500">
-                Open the assistant automatically when supported.
+          {/* Auto-open toggle */}
+          <div className="mt-5 flex min-w-0 items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-700">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-100">
+                Auto-open sidebar
+              </p>
+              <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                Open automatically when supported.
               </p>
             </div>
 
@@ -260,23 +362,23 @@ const handleSave = async () => {
               className={toggleClass(settings.autoOpenSidebar)}
             >
               <span
-                className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                  settings.autoOpenSidebar
-                    ? 'translate-x-6'
-                    : 'translate-x-1'
+                className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                  settings.autoOpenSidebar ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
             </button>
           </div>
         </section>
 
-        <section className={sectionClass}>
-          <div className="mb-4 flex items-center gap-2">
-            <BookOpen size={17} className="text-blue-600" />
-            <h3 className="text-sm font-semibold">Learning preferences</h3>
-          </div>
+        {/* Learning Preferences */}
+        <section className={cardClass}>
+          {sectionHeading(
+            <BookOpen size={19} />,
+            'Learning preferences',
+            'Personalize how AI helps you learn'
+          )}
 
-          <label className="block text-xs font-medium text-gray-600">
+          <label className="block min-w-0 text-xs font-semibold text-slate-600 dark:text-slate-300">
             Summary length
             <select
               value={settings.summaryLength}
@@ -294,7 +396,7 @@ const handleSave = async () => {
             </select>
           </label>
 
-          <label className="mt-4 block text-xs font-medium text-gray-600">
+          <label className="mt-4 block min-w-0 text-xs font-semibold text-slate-600 dark:text-slate-300">
             Default quiz difficulty
             <select
               value={settings.quizDifficulty}
@@ -312,11 +414,13 @@ const handleSave = async () => {
             </select>
           </label>
 
-          <label className="mt-4 block text-xs font-medium text-gray-600">
-            Language
+          <label className="mt-4 block min-w-0 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Preferred language
             <select
               value={settings.language}
-              onChange={(event) => updateSetting('language', event.target.value)}
+              onChange={(event) =>
+                updateSetting('language', event.target.value)
+              }
               className={selectClass}
             >
               <option value="en">English</option>
@@ -328,18 +432,28 @@ const handleSave = async () => {
           </label>
         </section>
 
-        <section className={sectionClass}>
-          <div className="mb-4 flex items-center gap-2">
-            <Brain size={17} className="text-blue-600" />
-            <h3 className="text-sm font-semibold">Accessibility</h3>
-          </div>
+        {/* Accessibility */}
+        <section className={cardClass}>
+          {sectionHeading(
+            <Brain size={19} />,
+            'Accessibility',
+            'Make your learning experience comfortable'
+          )}
 
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium">Keyboard shortcuts</p>
-              <p className="mt-1 text-xs text-gray-500">
-                Enable supported keyboard shortcuts.
-              </p>
+          <div className="flex min-w-0 items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-700">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm dark:bg-slate-600 dark:text-blue-400">
+                <Keyboard size={17} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-100">
+                  Keyboard shortcuts
+                </p>
+                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                  Enable supported keyboard shortcuts.
+                </p>
+              </div>
             </div>
 
             <button
@@ -348,51 +462,88 @@ const handleSave = async () => {
               aria-checked={settings.keyboardShortcuts}
               aria-label="Keyboard shortcuts"
               onClick={() =>
-                updateSetting('keyboardShortcuts', !settings.keyboardShortcuts)
+                updateSetting(
+                  'keyboardShortcuts',
+                  !settings.keyboardShortcuts
+                )
               }
               className={toggleClass(settings.keyboardShortcuts)}
             >
               <span
-                className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
                   settings.keyboardShortcuts
-                    ? 'translate-x-6'
-                    : 'translate-x-1'
+                    ? 'translate-x-5'
+                    : 'translate-x-0'
                 }`}
               />
             </button>
           </div>
 
-          <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
-            <Languages size={14} />
-            <span>Language preferences are saved with your settings.</span>
-            <Keyboard size={14} className="ml-auto" />
+          <div className="mt-4 flex min-w-0 items-center gap-2 text-[10px] text-slate-400">
+            <Languages size={14} className="shrink-0" />
+            <span className="min-w-0">
+              Language preferences are saved with your settings.
+            </span>
+          </div>
+        </section>
+
+        {/* Account */}
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-red-100 bg-white shadow-sm dark:border-red-950 dark:bg-slate-800">
+          <div className="flex min-w-0 items-center gap-3 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-500 dark:bg-red-950/50 dark:text-red-400">
+              <LogOut size={19} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                Account
+              </h3>
+              <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
+                Sign out of your EduPilot account.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              disabled={isLoggingOut}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950"
+            >
+              {isLoggingOut ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <LogOut size={14} />
+              )}
+              {isLoggingOut ? 'Signing out' : 'Logout'}
+            </button>
           </div>
         </section>
       </div>
 
-      <div className="sticky bottom-0 mt-4 flex gap-2 border-t border-gray-200 bg-gray-50 py-3">
+      {/* Sticky Actions */}
+      <div className="sticky bottom-0 z-10 flex min-w-0 gap-3 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(15,23,42,0.04)] backdrop-blur dark:border-slate-700 dark:bg-slate-800/95">
         <button
           type="button"
           onClick={handleReset}
-          disabled={isSaving}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+          disabled={isSaving || isLoggingOut}
+          className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
         >
-          <RotateCcw size={14} />
-          Reset defaults
+          <RotateCcw size={15} className="shrink-0" />
+          Reset
         </button>
 
         <button
           type="button"
           onClick={() => void handleSave()}
-          disabled={isSaving}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          disabled={isSaving || isLoggingOut}
+          className="flex min-w-0 flex-[1.5] items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-3 text-xs font-bold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 disabled:opacity-50 dark:shadow-none"
         >
           {isSaving ? (
-            <Loader2 size={14} className="animate-spin" />
+            <Loader2 size={15} className="shrink-0 animate-spin" />
           ) : (
-            <Save size={14} />
+            <Save size={15} className="shrink-0" />
           )}
-          {isSaving ? 'Saving...' : 'Save settings'}
+          {isSaving ? 'Saving...' : 'Save changes'}
         </button>
       </div>
     </div>
@@ -400,3 +551,4 @@ const handleSave = async () => {
 };
 
 export default SettingsPage;
+ 

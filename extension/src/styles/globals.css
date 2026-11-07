@@ -1,27 +1,127 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  *, *::before, *::after { box-sizing: border-box; }
+/* ============================================
+   EduPilot AI – Global Theme
+============================================ */
 
-  body {
-    @apply m-0 p-0 antialiased;
-    -webkit-font-smoothing: antialiased;
-  }
+:root {
+  color-scheme: light;
 
-  /* Custom scrollbar for popup */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { @apply bg-gray-50; }
-  ::-webkit-scrollbar-thumb { @apply bg-gray-200 rounded-full; }
-  ::-webkit-scrollbar-thumb:hover { @apply bg-gray-300; }
+  --app-bg: #F8FAFC;
+  --card-bg: #FFFFFF;
+  --input-bg: #F8FAFC;
+  --border-color: #E2E8F0;
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+  --primary: #2563EB;
 }
 
-@layer components {
-  .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium
-           px-4 py-2 rounded-lg text-sm transition-colors duration-150
-           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed;
-  }
+:root.dark {
+  color-scheme: dark;
+
+  --app-bg: #0F172A;
+  --card-bg: #1E293B;
+  --input-bg: #273449;
+  --border-color: #334155;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --primary: #60A5FA;
+}
+
+/* ============================================
+   Base Styles
+============================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 400px;
+  height: 580px;
+  min-height: 580px;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  background: var(--app-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ============================================
+   Form Controls
+============================================ */
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+input,
+textarea,
+select {
+  color: var(--text-primary);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.75;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* ============================================
+   Scrollbar
+============================================ */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
+}
+
+.dark * {
+  scrollbar-color: #475569 transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
 }

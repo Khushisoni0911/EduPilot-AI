@@ -29,32 +29,42 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
       onAuthenticated();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Something went wrong. Please try again.'
+        err instanceof Error
+          ? err.message
+          : 'Something went wrong. Please try again.'
       );
     } finally {
       setIsLoading(false);
     }
   };
 
+  const inputClass =
+    'w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:ring-blue-900';
+
   return (
-    <div className="flex min-h-full items-center justify-center bg-gray-50 px-6 py-8">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-7 shadow-sm">
+    <div className="flex min-h-full items-center justify-center bg-gray-50 px-5 py-8 dark:bg-gray-900">
+      <div className="w-full max-w-sm rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="mb-7 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">EduPilot AI</h1>
-          <p className="mt-2 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            EduPilot AI
+          </h1>
+
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             Your personal AI-powered learning assistant
           </p>
         </div>
 
-        <div className="mb-6 grid grid-cols-2 rounded-lg bg-gray-100 p-1">
+        <div className="mb-6 grid grid-cols-2 rounded-lg bg-gray-100 p-1 dark:bg-gray-700">
           <button
             type="button"
             onClick={() => {
               setIsLogin(true);
               setError('');
             }}
-            className={`rounded-md py-2 text-sm font-medium ${
-              isLogin ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'
+            className={`rounded-md py-2 text-sm font-medium transition ${
+              isLogin
+                ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-600 dark:text-blue-300'
+                : 'text-gray-500 dark:text-gray-300'
             }`}
           >
             Login
@@ -66,8 +76,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
               setIsLogin(false);
               setError('');
             }}
-            className={`rounded-md py-2 text-sm font-medium ${
-              !isLogin ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500'
+            className={`rounded-md py-2 text-sm font-medium transition ${
+              !isLogin
+                ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-600 dark:text-blue-300'
+                : 'text-gray-500 dark:text-gray-300'
             }`}
           >
             Register
@@ -77,9 +89,10 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Full name
               </label>
+
               <input
                 type="text"
                 value={name}
@@ -89,15 +102,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
                 minLength={2}
                 maxLength={100}
                 autoComplete="name"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className={inputClass}
               />
             </div>
           )}
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Email address
             </label>
+
             <input
               type="email"
               value={email}
@@ -105,14 +119,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
               placeholder="Enter your email"
               required
               autoComplete="email"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className={inputClass}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Password
             </label>
+
             <input
               type="password"
               value={password}
@@ -121,12 +136,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
               required
               minLength={8}
               autoComplete={isLogin ? 'current-password' : 'new-password'}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className={inputClass}
             />
           </div>
 
           {error && (
-            <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            <p
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+            >
               {error}
             </p>
           )}
@@ -144,7 +162,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthenticated }) => {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-gray-400">
+        <p className="mt-6 text-center text-xs text-gray-400 dark:text-gray-500">
           Your learning journey starts here.
         </p>
       </div>

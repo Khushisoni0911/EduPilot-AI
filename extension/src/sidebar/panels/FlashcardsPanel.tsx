@@ -40,7 +40,7 @@ const FlashcardsPanel: React.FC = () => {
       }
 
       const response = await authenticatedFetch(
-        'http://localhost:5001/api/ai/flashcards',
+        'https://edupilot-ai-backend-zrka.onrender.com/api/ai/flashcards',
         {
           method: 'POST',
           headers: {
